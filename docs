@@ -1,0 +1,52 @@
+#!/usr/bin/env perl
+
+use v5.20;
+
+use strict;
+use warnings;
+
+use Mojolicious::Lite;
+
+plugin JSONConfig => {
+    app->home->child('conf/docs.json');
+};
+
+get '/' => sub {
+    my $c = shift;
+
+    return $c->render( 'index' );
+};
+
+get '/:area/:version/:lang/:format' => sub {
+    my $c = shift;
+
+    return if !_check_params( $c );
+
+    return $c->respond_to(
+        html => $c->render( 'htmldoc' ),
+        pdf  => '...',
+        epub => '...',
+    );
+};
+
+app->run;
+
+sub _check_params {
+    my $c = shift;
+
+    my @keys   = qw(area version lang format);
+    my %params = map{ $_ => $c->param( $_ ) }@keys;
+
+    my $config = $c->app->config;
+
+    for my $key ( @keys ) {
+        if ( !exists $config->{$key} ) {
+            $c->reply->not_found;
+            return;
+        }
+
+        $config = $config->{$key};
+    }
+
+    return 1;
+}
